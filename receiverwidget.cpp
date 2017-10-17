@@ -71,7 +71,22 @@ void ReceiverWidget::receiveFromClient()
     fileName = "Famous-characters-Troll-face-Troll-face-poker-269483.jpg";
     fileSize = 84369;
 
-    uCharData = (uchar*)malloc(fileSize + 256);
+    //QDataStream stream(tcpConnection);
+    QByteArray ba;
+    ba = tcpConnection->readAll();
+    qDebug() << "received data " << ba.size() << " bytes";
+
+    QPixmap pixmap;
+    pixmap.loadFromData(ba);
+    if (pixmap.isNull())
+        qDebug() << "The pixmap is null";
+    else
+        qDebug() << "Converted to pixmap succesfully.";
+    ui->playerLabel->setPixmap(pixmap);
+
+
+
+   /* uCharData = (uchar*)malloc(fileSize + 256);
 
     quint64 len = tcpConnection->read((char*)uCharData, fileSize);
 
@@ -91,7 +106,7 @@ void ReceiverWidget::receiveFromClient()
     else
         qDebug() << "Converted to pixmap succesfully.";
     ui->playerLabel->setPixmap(pixmap);
-
+*/
    // qDebug() << "wholeByteArray size: " << wholeByteArray.size();
 
     //handleReceivedData(len);
