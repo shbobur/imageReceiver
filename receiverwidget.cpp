@@ -17,6 +17,9 @@ ReceiverWidget::ReceiverWidget(QWidget *parent) :
 {
     ui->setupUi(this);
 
+    fileSize = 84369;
+    chunksSize = 0;
+
     QStringListModel *model = new QStringListModel(this);
     model->setStringList(receivedFilesList);
     ui->receivedFileListView->setModel(model);
@@ -24,7 +27,7 @@ ReceiverWidget::ReceiverWidget(QWidget *parent) :
     tcpServer = new QTcpServer(this);
     connect(tcpServer, SIGNAL(newConnection()), SLOT(acceptConnection()));
 
-    connect(this, SIGNAL(receiveFinished()), SLOT(handleReceivedData()));
+   // connect(this, SIGNAL(receiveFinished()), SLOT(handleReceivedData()));
 
     startListening();
 }
@@ -47,40 +50,52 @@ void ReceiverWidget::acceptConnection()
 
 void ReceiverWidget::receiveFromClient()
 {
-    QDataStream in(tcpConnection);
-    QByteArray tmpByteArray;
-    //bool isInfoGot = false;
+    qDebug() << "stream size " << tcpConnection->bytesAvailable();
 
-    in >> fileName;
-    qDebug() << fileName;
-    receivedFilesList.append(fileName);
-    in >> fileSize;
-    qDebug() << fileSize;
+    if (tcpConnection->bytesAvailable() < fileSize)
+        return ;
+    /*
+    if (fileSize == 0) {
+        QDataStream in(tcpConnection);
 
-    int receivedDataSize = 0;
-
-   while (tcpConnection->waitForReadyRead(1000))
-   {
-            while (tcpConnection->bytesAvailable())
-            {
-                qDebug() << "bytesAvailable:" << tcpConnection->bytesAvailable();
-                //in >> tmpByteArray;
-                tmpByteArray = tcpConnection->readAll();
-
-                qDebug() << "adding... " << wholeByteArray;
-                wholeByteArray.insert(wholeByteArray.size(), tmpByteArray);
-
-                qDebug() << "tmp size " << tmpByteArray.size();
-
-                receivedDataSize += tmpByteArray.size();
-            }
-           // break;
+        in >> fileName;
+        qDebug() << fileName;
+        receivedFilesList.append(fileName);
+        QString str;
+        in >> str;
+        fileSize = str.toInt();
+        qDebug() << fileSize;
+        return;
     }
+*/
+    fileName = "Famous-characters-Troll-face-Troll-face-poker-269483.jpg";
+    fileSize = 84369;
 
-    qDebug() << "received " << receivedDataSize;
-    qDebug() << "wholeByteArray size: " << wholeByteArray.size();
+    uCharData = (uchar*)malloc(fileSize + 256);
 
-    handleReceivedData();
+    quint64 len = tcpConnection->read((char*)uCharData, fileSize);
+
+    qDebug() << "received " << len;
+
+    QImage image;                 // Construct a new QImage
+    image.loadFromData(uCharData, len, "jpeg"); // Load the image from the receive buffer
+    if (image.isNull())           // Check if the image was indeed received
+            qDebug() << "The image is null. Something failed.";
+    else
+        qDebug() << "Converted to image succesfully.";
+
+    QPixmap pixmap;
+    pixmap.loadFromData(uCharData, len, "jpeg");
+    if (pixmap.isNull())
+        qDebug() << "The pixmap is null";
+    else
+        qDebug() << "Converted to pixmap succesfully.";
+    ui->playerLabel->setPixmap(pixmap);
+
+   // qDebug() << "wholeByteArray size: " << wholeByteArray.size();
+
+    //handleReceivedData(len);
+
 }
 
 void ReceiverWidget::clientDiconnected()
@@ -88,20 +103,22 @@ void ReceiverWidget::clientDiconnected()
     ui->sourceLineEdit->setText("");
 }
 
-void ReceiverWidget::handleReceivedData()
+void ReceiverWidget::handleReceivedData(qint64 len)
 {
-    if (wholeByteArray.size() > fileSize.size())
+    /*if (wholeByteArray.size() > fileSize.size())
         wholeByteArray.chop(wholeByteArray.size() - fileSize.toInt());
-
+*/
     QFile file(fileName);
     file.open(QIODevice::WriteOnly);
-    file.write(wholeByteArray);
+    //file.write(wholeByteArray);
+    file.write((char*)uCharData, len);
     file.close();
 
 
     qDebug() << "Whole received data " << wholeByteArray.size() << " bytes";
     QPixmap pixmap;
-    pixmap.loadFromData(wholeByteArray, "JPEG");
+    //pixmap.loadFromData(wholeByteArray, "JPEG");
+    pixmap.loadFromData(uCharData, len, "JPEG");
     ui->playerLabel->setPixmap(pixmap);
     wholeByteArray.clear();
 }
@@ -109,7 +126,7 @@ void ReceiverWidget::handleReceivedData()
 bool ReceiverWidget::tryToListen()
 {
 
-    return tcpServer->listen(QHostAddress("127.0.0.1"), 2020);
+    return tcpServer->listen(QHostAddress("127.0.0.1"), 3030);
 }
 
 void ReceiverWidget::startListening()

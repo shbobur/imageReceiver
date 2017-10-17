@@ -24,7 +24,7 @@ private slots:
     void acceptConnection();
     void receiveFromClient();
     void clientDiconnected();
-    void handleReceivedData();
+    void handleReceivedData(qint64 len);
 
 signals:
     void receiveFinished();
@@ -38,7 +38,9 @@ private:
 
    // QDataStream in;
     QByteArray wholeByteArray;
-    QString fileName, fileSize;
+    QString fileName;
+    qint64 fileSize, chunksSize;
+    uchar *uCharData;
 
     bool tryToListen();
     void startListening();
